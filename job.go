@@ -83,6 +83,11 @@ func continuousJob(job JobDto, waitGroup *sync.WaitGroup) {
 	}
 
 	for true {
+		var existingJob Job
+		result := DB.Where("name = ?", job.Name).Find(&existingJob)
+		if result.Error != nil {
+			break
+		}
 		err := backoff.Retry(jobExecutor, backoff.NewExponentialBackOff())
 		if err != nil {
 			panic("failed to backoff!")
