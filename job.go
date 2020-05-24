@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,7 +63,6 @@ func executeJob(job JobDto, logFileName string) error {
 	go func() {
 		commandChannel := JobCommandChannelMap[job.Name]
 		for jobCmd := range commandChannel {
-			fmt.Println(jobCmd)
 			if jobCmd.Command == Stop {
 				_ = proc.Signal(syscall.SIGTERM)
 			}
