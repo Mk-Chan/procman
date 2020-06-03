@@ -168,10 +168,18 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 	defer delete(JobDataMap, jobName)
 
 	commandChannel := jobData.CommandChannel
+	if jobData.Dto.Schedule == "reboot" {
+		go func() {
+			commandChannel <- JobCommand{
+				JobName: jobName,
+				Command: Start,
+			}
+		}()
+	}
+
 	var context context2.Context
 	var cancel context2.CancelFunc
 	var jobWaitGroup sync.WaitGroup
-
 	for jobCmd := range commandChannel {
 		if jobCmd.Command == Start {
 			jobData.State = Starting

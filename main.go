@@ -29,7 +29,7 @@ func main() {
 	go initWebServer(&waitGroup)
 
 	var jobs []Job
-	_ = DB.Where("schedule = ?", "reboot").Find(&jobs)
+	_ = DB.Find(&jobs)
 
 	for jobNum := 0; jobNum < len(jobs); jobNum++ {
 		job := &jobs[jobNum]
