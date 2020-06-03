@@ -8,6 +8,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type JobStateResponse struct {
+	JobName string `json:"job_name"`
+	State   string `json:"state"`
+}
+
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
 func index(responseWriter http.ResponseWriter, _ *http.Request) {
 	_, _ = responseWriter.Write([]byte("index!"))
 }
@@ -36,7 +45,12 @@ func getJob(responseWriter http.ResponseWriter, request *http.Request) {
 	jobName := vars["name"]
 
 	var job Job
-	DB.Where("name = ?", jobName).Find(&job)
+	result := DB.Where("name = ?", jobName).Find(&job)
+	if result.Error != nil {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job " + jobName + " not found"})
+		return
+	}
 
 	jobDto := JobDto{
 		Name:     job.Name,
@@ -54,6 +68,7 @@ func createJob(responseWriter http.ResponseWriter, request *http.Request) {
 	err := json.NewDecoder(request.Body).Decode(&newJob)
 	if err != nil {
 		responseWriter.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Unable to parse request body!"})
 		return
 	}
 
@@ -65,9 +80,10 @@ func createJob(responseWriter http.ResponseWriter, request *http.Request) {
 	})
 	if result.Error != nil {
 		responseWriter.WriteHeader(http.StatusInternalServerError)
-		_, _ = responseWriter.Write([]byte("Job with name " + newJob.Name + " already exists!"))
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job with name " + newJob.Name + " already exists!"})
 		return
 	}
+
 	JobChannel <- newJob
 	responseWriter.WriteHeader(http.StatusCreated)
 }
@@ -92,7 +108,7 @@ func replaceJob(responseWriter http.ResponseWriter, request *http.Request) {
 
 	if replacedJob.Name != jobName {
 		responseWriter.WriteHeader(http.StatusBadRequest)
-		_, _ = responseWriter.Write([]byte("Job names in url and body don't match!"))
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job names in url and body don't match!"})
 		return
 	}
 
@@ -109,41 +125,86 @@ func deleteJob(responseWriter http.ResponseWriter, request *http.Request) {
 	var existingJob Job
 	result := DB.Where("name = ?", jobName).Find(&existingJob)
 	if result.Error != nil {
-		responseWriter.WriteHeader(http.StatusOK)
 		return
 	}
 
 	DB.Delete(&existingJob)
 }
 
-func startJob(responseWriter http.ResponseWriter, request *http.Request) {
+func jobStart(responseWriter http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	jobName := vars["name"]
 
 	var job Job
 	DB.Where("name = ?", jobName).Find(&job)
 
-	jobDto := JobDto{
-		Name:     job.Name,
-		Command:  job.Command,
-		Type:     job.Type,
-		Schedule: job.Schedule,
+	jobData, ok := JobDataMap[jobName]
+	if ok && jobData != nil {
+		jobData.CommandChannel <- JobCommand{
+			JobName: jobName,
+			Command: Start,
+		}
+	} else {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job " + jobName + " not found"})
 	}
-	JobChannel <- jobDto
 }
 
-func stopJob(responseWriter http.ResponseWriter, request *http.Request) {
+func jobStop(responseWriter http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	jobName := vars["name"]
 
-	JobCommandChannelMap[jobName] <- JobCommand{
-		JobName: jobName,
-		Command: Stop,
+	jobData, ok := JobDataMap[jobName]
+	if ok && jobData != nil {
+		jobData.CommandChannel <- JobCommand{
+			JobName: jobName,
+			Command: Stop,
+		}
+	} else {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job " + jobName + " not found"})
+	}
+}
+
+func jobRestart(responseWriter http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	jobName := vars["name"]
+
+	var job Job
+	DB.Where("name = ?", jobName).Find(&job)
+
+	jobData, ok := JobDataMap[jobName]
+	if ok && jobData != nil {
+		jobData.CommandChannel <- JobCommand{
+			JobName: jobName,
+			Command: Restart,
+		}
+	} else {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job " + jobName + " not found"})
+	}
+}
+
+func jobState(responseWriter http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	jobName := vars["name"]
+
+	jobData, ok := JobDataMap[jobName]
+	if ok && jobData != nil {
+		_ = json.NewEncoder(responseWriter).Encode(JobStateResponse{
+			JobName: jobName,
+			State:   string(jobData.State),
+		})
+	} else {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(responseWriter).Encode(ErrorResponse{Message: "Job " + jobName + " not found"})
 	}
 }
 
 func initWebServer(waitGroup *sync.WaitGroup) {
 	router := mux.NewRouter()
+	router.Use(loggingMiddleware)
+	// router.Use(profilingMiddleware)
 
 	router.HandleFunc("/", index).Methods(http.MethodGet)
 
@@ -153,8 +214,10 @@ func initWebServer(waitGroup *sync.WaitGroup) {
 	router.HandleFunc("/job/replace/{name}", replaceJob).Methods(http.MethodPut)
 	router.HandleFunc("/job/delete/{name}", deleteJob).Methods(http.MethodDelete)
 
-	router.HandleFunc("/job/{name}/start", startJob).Methods(http.MethodGet)
-	router.HandleFunc("/job/{name}/stop", stopJob).Methods(http.MethodGet)
+	router.HandleFunc("/job/{name}/start", jobStart).Methods(http.MethodGet)
+	router.HandleFunc("/job/{name}/stop", jobStop).Methods(http.MethodGet)
+	router.HandleFunc("/job/{name}/restart", jobRestart).Methods(http.MethodGet)
+	router.HandleFunc("/job/{name}/state", jobState).Methods(http.MethodGet)
 
 	err := http.ListenAndServe(":10000", router)
 	if err != nil {

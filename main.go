@@ -9,19 +9,14 @@ import (
 
 var DB *gorm.DB
 var JobChannel chan JobDto
-var JobCommandChannelMap map[string]chan JobCommand
+var JobDataMap map[string]*JobData
 
 func main() {
 	DB, _ = gorm.Open("sqlite3", "procman.db")
 	defer DB.Close()
 	JobChannel = make(chan JobDto)
 	defer close(JobChannel)
-	JobCommandChannelMap = make(map[string]chan JobCommand)
-	defer func() {
-		for jobName := range JobCommandChannelMap {
-			close(JobCommandChannelMap[jobName])
-		}
-	}()
+	JobDataMap = make(map[string]*JobData)
 
 	DB.AutoMigrate(&Job{})
 
