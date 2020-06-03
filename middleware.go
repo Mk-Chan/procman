@@ -19,6 +19,6 @@ func profilingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(writer, request)
 		endTime := time.Now()
 		timeTakenMs := (endTime.UnixNano() - startTime.UnixNano()) / 1000
-		log.Println("Took", timeTakenMs, "ms")
+		log.Println("took", timeTakenMs, "ms")
 	})
 }

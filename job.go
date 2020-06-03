@@ -4,6 +4,7 @@ import (
 	"bufio"
 	context2 "context"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -167,6 +168,8 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 	JobDataMap[jobName] = jobData
 	defer delete(JobDataMap, jobName)
 
+	log.Println("initialized job manager:", jobName)
+
 	commandChannel := jobData.CommandChannel
 	if jobData.Dto.Schedule == "reboot" {
 		go func() {
@@ -230,6 +233,7 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 }
 
 func jobListener(jobChannel <-chan JobDto, waitGroup *sync.WaitGroup) {
+	log.Println("initialized job listener")
 	for job := range jobChannel {
 		jobData := JobData{
 			Dto:            job,

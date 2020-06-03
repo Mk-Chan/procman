@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"sync"
 
@@ -219,6 +220,7 @@ func initWebServer(waitGroup *sync.WaitGroup) {
 	router.HandleFunc("/job/{name}/restart", jobRestart).Methods(http.MethodGet)
 	router.HandleFunc("/job/{name}/state", jobState).Methods(http.MethodGet)
 
+	log.Println("initialized web server")
 	err := http.ListenAndServe(":10000", router)
 	if err != nil {
 		panic("unable to initialize web server!")
