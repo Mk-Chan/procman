@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	context2 "context"
+	"context"
 	"io"
 	"log"
 	"os"
@@ -74,7 +74,7 @@ func trackProcess(procOut io.ReadCloser, logFilePath string) {
 	}
 }
 
-func executeJob(context context2.Context, job JobDto, logFilePath string) error {
+func executeJob(ctx context.Context, job JobDto, logFilePath string) error {
 	commandSplit := strings.Split(job.Command, " ")
 	command := exec.Command(commandSplit[0], commandSplit[1:]...)
 
@@ -93,18 +93,18 @@ func executeJob(context context2.Context, job JobDto, logFilePath string) error 
 	select {
 	case <-processDoneChannel:
 		return nil
-	case <-context.Done():
+	case <-ctx.Done():
 		_ = command.Process.Signal(syscall.SIGTERM)
 		<-processDoneChannel
 		return nil
 	}
 }
 
-func continuousJob(context context2.Context, job JobDto) {
+func continuousJob(ctx context.Context, job JobDto) {
 	jobExecutor := func() error {
 		timestampStr := strconv.FormatInt(time.Now().UnixNano(), 10)
 		logFilePath := filepath.Join("logs", job.Name, timestampStr) + ".log"
-		return executeJob(context, job, logFilePath)
+		return executeJob(ctx, job, logFilePath)
 	}
 
 	for true {
@@ -124,28 +124,28 @@ func continuousJob(context context2.Context, job JobDto) {
 		}
 
 		select {
-		case <-context.Done():
+		case <-ctx.Done():
 			break
 		}
 	}
 }
 
-func oneTimeJob(context context2.Context, job JobDto) {
+func oneTimeJob(ctx context.Context, job JobDto) {
 	timestampStr := strconv.FormatInt(time.Now().UnixNano(), 10)
 	logFilePath := filepath.Join("logs", job.Name, timestampStr) + ".log"
-	err := executeJob(context, job, logFilePath)
+	err := executeJob(ctx, job, logFilePath)
 	if err != nil {
 		panic("failed to execute job!")
 	}
 }
 
-func runJob(context context2.Context, job JobDto, waitGroup *sync.WaitGroup) {
+func runJob(ctx context.Context, job JobDto, waitGroup *sync.WaitGroup) {
 	waitTillAverageCpuUsage(30)
 
 	if job.Type == Continuous {
-		continuousJob(context, job)
+		continuousJob(ctx, job)
 	} else if job.Type == OneTime {
-		oneTimeJob(context, job)
+		oneTimeJob(ctx, job)
 	} else {
 		panic("unknown job type!")
 	}
@@ -156,7 +156,7 @@ func runJob(context context2.Context, job JobDto, waitGroup *sync.WaitGroup) {
 }
 
 func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
-	backgroundContext := context2.Background()
+	backgroundctx := context.Background()
 	jobName := jobData.Dto.Name
 
 	logDirName := filepath.Join("logs", jobName)
@@ -180,8 +180,8 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 		}()
 	}
 
-	var context context2.Context
-	var cancel context2.CancelFunc
+	var ctx context.Context
+	var cancel context.CancelFunc
 	var jobWaitGroup sync.WaitGroup
 	for jobCmd := range commandChannel {
 		if jobCmd.Command == Start {
@@ -195,8 +195,8 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			jobWaitGroup.Add(1)
-			context, cancel = context2.WithCancel(backgroundContext)
-			go runJob(context, jobData.Dto, &jobWaitGroup)
+			ctx, cancel = context.WithCancel(backgroundctx)
+			go runJob(ctx, jobData.Dto, &jobWaitGroup)
 		} else if jobCmd.Command == Restart {
 			jobData.State = Stopping
 
@@ -215,8 +215,8 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			jobWaitGroup.Add(1)
-			context, cancel = context2.WithCancel(backgroundContext)
-			go runJob(context, jobData.Dto, &jobWaitGroup)
+			ctx, cancel = context.WithCancel(backgroundctx)
+			go runJob(ctx, jobData.Dto, &jobWaitGroup)
 		} else if jobCmd.Command == Stop {
 			jobData.State = Stopping
 
