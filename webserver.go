@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -202,7 +203,7 @@ func jobState(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func initWebServer(waitGroup *sync.WaitGroup) {
+func initWebServer(port int, waitGroup *sync.WaitGroup) {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 	// router.Use(profilingMiddleware)
@@ -221,7 +222,8 @@ func initWebServer(waitGroup *sync.WaitGroup) {
 	router.HandleFunc("/job/{name}/state", jobState).Methods(http.MethodGet)
 
 	log.Println("[INIT]", "initialized web server")
-	err := http.ListenAndServe(":10000", router)
+	listenAddress := ":" + strconv.Itoa(port)
+	err := http.ListenAndServe(listenAddress, router)
 	if err != nil {
 		panic("unable to initialize web server!")
 	}

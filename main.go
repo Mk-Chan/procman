@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log"
+	"os"
+	"strconv"
 	"sync"
 
 	"github.com/jinzhu/gorm"
@@ -12,6 +15,16 @@ var JobChannel chan JobDto
 var JobDataMap map[string]*JobData
 
 func main() {
+	if len(os.Args) < 2 {
+		log.Println("Usage: ./procman <server-port>")
+		return
+	}
+
+	port, err := strconv.ParseInt(os.Args[1], 10, 32)
+	if err != nil {
+		panic(err)
+	}
+
 	DB, _ = gorm.Open("sqlite3", "procman.db")
 	defer DB.Close()
 	JobChannel = make(chan JobDto)
@@ -26,7 +39,7 @@ func main() {
 	go jobListener(JobChannel, &waitGroup)
 
 	waitGroup.Add(1)
-	go initWebServer(&waitGroup)
+	go initWebServer(int(port), &waitGroup)
 
 	var jobs []Job
 	_ = DB.Find(&jobs)
