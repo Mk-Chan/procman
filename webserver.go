@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
 type JobStateResponse struct {
-	JobName string `json:"job_name"`
-	State   string `json:"state"`
+	JobName string    `json:"job_name"`
+	State   string    `json:"state"`
+	Time    time.Time `json:"time"`
 }
 
 type ErrorResponse struct {
@@ -196,6 +198,7 @@ func jobState(responseWriter http.ResponseWriter, request *http.Request) {
 		_ = json.NewEncoder(responseWriter).Encode(JobStateResponse{
 			JobName: jobName,
 			State:   string(jobData.State),
+			Time:    time.Now(),
 		})
 	} else {
 		responseWriter.WriteHeader(http.StatusNotFound)
