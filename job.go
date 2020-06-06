@@ -156,7 +156,7 @@ func runJob(ctx context.Context, job JobDto, waitGroup *sync.WaitGroup) {
 }
 
 func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
-	backgroundctx := context.Background()
+	backgroundCtx := context.Background()
 	jobName := jobData.Dto.Name
 
 	logDirName := filepath.Join("logs", jobName)
@@ -195,7 +195,7 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			jobWaitGroup.Add(1)
-			ctx, cancel = context.WithCancel(backgroundctx)
+			ctx, cancel = context.WithCancel(backgroundCtx)
 			go runJob(ctx, jobData.Dto, &jobWaitGroup)
 		} else if jobCmd.Command == Restart {
 			jobData.State = Stopping
@@ -215,7 +215,7 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			jobWaitGroup.Add(1)
-			ctx, cancel = context.WithCancel(backgroundctx)
+			ctx, cancel = context.WithCancel(backgroundCtx)
 			go runJob(ctx, jobData.Dto, &jobWaitGroup)
 		} else if jobCmd.Command == Stop {
 			jobData.State = Stopping
