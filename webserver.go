@@ -21,10 +21,6 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-func index(responseWriter http.ResponseWriter, _ *http.Request) {
-	_, _ = responseWriter.Write([]byte("index!"))
-}
-
 func listJobs(responseWriter http.ResponseWriter, _ *http.Request) {
 	var jobs []Job
 	_ = DB.Find(&jobs)
@@ -211,7 +207,8 @@ func initWebServer(port int, waitGroup *sync.WaitGroup) {
 	router.Use(loggingMiddleware)
 	// router.Use(profilingMiddleware)
 
-	router.HandleFunc("/", index).Methods(http.MethodGet)
+	fileServer := http.FileServer(http.Dir("./static"))
+	router.Handle("/", fileServer)
 
 	router.HandleFunc("/jobs", listJobs).Methods(http.MethodGet)
 	router.HandleFunc("/job/{name}", getJob).Methods(http.MethodGet)

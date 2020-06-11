@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ProcMan</title>
+</head>
+<body>
+<table>
+    <thead>
+    <tr>
+        <th>job</th>
+        <th>state</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr data-job="test">
+        <td>test</td>
+        <td>unknown</td>
+    </tr>
+    </tbody>
+</table>
+
+<script type="application/javascript">
+    function updateJobState(jobName) {
+        fetch(`/job/${jobName}/state`)
+            .then(response => {
+                if (response.status !== 200) {
+                    console.error(`Unable to retrieve job state! Status code: ${response.status}`);
+                    return;
+                }
+                return response.json();
+            })
+            .then(responseData => {
+                //console.log(responseData);
+                let stateText = responseData["state"] || "unknown";
+                let latestStateNode = document.createTextNode(stateText)
+                document.querySelector(`[data-job='${jobName}']`)
+                    .childNodes
+                    .item(3)
+                    .replaceWith(latestStateNode)
+            });
+    }
+
+    setInterval(() => updateJobState("test"), 10 * 1000);
+</script>
+
+</body>
+</html>
