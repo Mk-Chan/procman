@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -79,7 +80,11 @@ func executeJob(ctx context.Context, job JobDto, logFilePath string) error {
 	command := exec.Command(commandSplit[0], commandSplit[1:]...)
 
 	procOut, _ := command.StdoutPipe()
-	_ = command.Start()
+	err := command.Start()
+	if err != nil {
+		log.Println("[JOB]", "[ERROR]", "failed to start job", job.Name)
+		return errors.New("failed to start job " + job.Name)
+	}
 	go trackProcess(procOut, logFilePath)
 
 	JobDataMap[job.Name].State = Running
