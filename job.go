@@ -105,6 +105,7 @@ func executeJob(ctx context.Context, job JobDto, logFilePath string) error {
 		log.Println("[JOB]", "[INFO]", "stopping", job.Name)
 		_ = command.Process.Signal(syscall.SIGTERM)
 		<-processDoneChannel
+		log.Println("[JOB]", "[INFO]", job.Name, "stopped")
 		return nil
 	}
 }
