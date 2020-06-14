@@ -82,7 +82,7 @@ func executeJob(ctx context.Context, job JobDto, logFilePath string) error {
 	procOut, _ := command.StdoutPipe()
 	err := command.Start()
 	if err != nil {
-		log.Println("[JOB]", "[ERROR]", "failed to start job", job.Name)
+		log.Println("[JOB]", "[ERROR]", "failed to start job", job.Name, ":", err)
 		return errors.New("failed to start job " + job.Name)
 	}
 	go trackProcess(procOut, logFilePath)
