@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -77,25 +78,34 @@ func trackProcess(procOut io.ReadCloser, logFilePath string) {
 func executeJob(ctx context.Context, job JobDto, logFilePath string) error {
 	commandSplit := strings.Split(job.Command, " ")
 	command := exec.Command(commandSplit[0], commandSplit[1:]...)
-
-	procOut, _ := command.StdoutPipe()
-	_ = command.Start()
-	go trackProcess(procOut, logFilePath)
-
-	JobDataMap[job.Name].State = Running
-
 	processDoneChannel := make(chan struct{})
+
+	log.Println("[JOB]", "[INFO]", "starting job", job.Name)
+	procOut, _ := command.StdoutPipe()
+	err := command.Start()
+	if err != nil {
+		log.Println("[JOB]", "[ERROR]", "failed to start job", job.Name, ":", err)
+		return errors.New("failed to start job " + job.Name)
+	}
+
+	go trackProcess(procOut, logFilePath)
 	go func() {
 		_ = command.Wait()
 		processDoneChannel <- struct{}{}
 	}()
 
+	JobDataMap[job.Name].State = Running
+	log.Println("[JOB]", "[INFO]", job.Name, "is running")
+
 	select {
 	case <-processDoneChannel:
+		log.Println("[JOB]", "[INFO]", job.Name, "finished")
 		return nil
 	case <-ctx.Done():
+		log.Println("[JOB]", "[INFO]", "stopping", job.Name)
 		_ = command.Process.Signal(syscall.SIGTERM)
 		<-processDoneChannel
+		log.Println("[JOB]", "[INFO]", job.Name, "stopped")
 		return nil
 	}
 }
@@ -125,7 +135,7 @@ func continuousJob(ctx context.Context, job JobDto) {
 
 		select {
 		case <-ctx.Done():
-			break
+			return
 		}
 	}
 }
