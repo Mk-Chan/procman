@@ -71,6 +71,7 @@ Job CRUD operations
 
 Job State Control & Query
 =========================
+/jobs/states - GET to list all job states
 /job/{name}/start - GET to start job
 /job/{name}/stop - GET to stop job
 /job/{name}/restart - GET to restart job
