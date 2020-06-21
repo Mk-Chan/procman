@@ -17,6 +17,14 @@ type JobStateResponse struct {
 	Time    time.Time `json:"time"`
 }
 
+type JobStatesResponse struct {
+	JobStates []struct {
+		JobName string `json:"job_name"`
+		State   string `json:"state"`
+	} `json:"jobs"`
+	Time time.Time `json:"time"`
+}
+
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
@@ -38,6 +46,22 @@ func listJobs(responseWriter http.ResponseWriter, _ *http.Request) {
 
 	jobsJson, _ := json.Marshal(jobDtos)
 	_, _ = responseWriter.Write(jobsJson)
+}
+
+func listJobStates(responseWriter http.ResponseWriter, _ *http.Request) {
+	var jobStatesResponse JobStatesResponse
+	jobStatesResponse.Time = time.Now()
+	for jobName := range JobDataMap {
+		jobDto := JobDataMap[jobName]
+		jobStatesResponse.JobStates = append(jobStatesResponse.JobStates, struct {
+			JobName string `json:"job_name"`
+			State   string `json:"state"`
+		}{
+			JobName: jobName,
+			State:   string(jobDto.State),
+		})
+	}
+	_ = json.NewEncoder(responseWriter).Encode(jobStatesResponse)
 }
 
 func getJob(responseWriter http.ResponseWriter, request *http.Request) {
@@ -211,6 +235,8 @@ func initWebServer(port int, waitGroup *sync.WaitGroup) {
 	router.Handle("/", fileServer)
 
 	router.HandleFunc("/jobs", listJobs).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/states", listJobStates).Methods(http.MethodGet)
+
 	router.HandleFunc("/job/{name}", getJob).Methods(http.MethodGet)
 	router.HandleFunc("/job/create", createJob).Methods(http.MethodPost)
 	router.HandleFunc("/job/replace/{name}", replaceJob).Methods(http.MethodPut)
