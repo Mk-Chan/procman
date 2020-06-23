@@ -204,6 +204,13 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 				break
 			}
 
+			JobDataMap[jobName].Dto = JobDto{
+				Name:     job.Name,
+				Command:  job.Command,
+				Type:     job.Type,
+				Schedule: job.Schedule,
+			}
+
 			jobWaitGroup.Add(1)
 			ctx, cancel = context.WithCancel(backgroundCtx)
 			go runJob(ctx, jobData.Dto, &jobWaitGroup)
@@ -222,6 +229,13 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			if result.Error != nil {
 				jobData.State = Exited
 				break
+			}
+
+			JobDataMap[jobName].Dto = JobDto{
+				Name:     job.Name,
+				Command:  job.Command,
+				Type:     job.Type,
+				Schedule: job.Schedule,
 			}
 
 			jobWaitGroup.Add(1)
