@@ -205,10 +205,10 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			JobDataMap[jobName].Dto = JobDto{
-				Name:     job.Name,
-				Command:  job.Command,
-				Type:     job.Type,
-				Schedule: job.Schedule,
+				Name:     existingJob.Name,
+				Command:  existingJob.Command,
+				Type:     existingJob.Type,
+				Schedule: existingJob.Schedule,
 			}
 
 			jobWaitGroup.Add(1)
@@ -232,10 +232,10 @@ func initJobManager(jobData *JobData, waitGroup *sync.WaitGroup) {
 			}
 
 			JobDataMap[jobName].Dto = JobDto{
-				Name:     job.Name,
-				Command:  job.Command,
-				Type:     job.Type,
-				Schedule: job.Schedule,
+				Name:     existingJob.Name,
+				Command:  existingJob.Command,
+				Type:     existingJob.Type,
+				Schedule: existingJob.Schedule,
 			}
 
 			jobWaitGroup.Add(1)
