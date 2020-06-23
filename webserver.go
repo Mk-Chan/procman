@@ -160,7 +160,11 @@ func jobStart(responseWriter http.ResponseWriter, request *http.Request) {
 	jobName := vars["name"]
 
 	var job Job
-	DB.Where("name = ?", jobName).Find(&job)
+	result := DB.Where("name = ?", jobName).Find(&job)
+	if result.Error != nil {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	jobData, ok := JobDataMap[jobName]
 	if ok && jobData != nil {
@@ -195,7 +199,11 @@ func jobRestart(responseWriter http.ResponseWriter, request *http.Request) {
 	jobName := vars["name"]
 
 	var job Job
-	DB.Where("name = ?", jobName).Find(&job)
+	result := DB.Where("name = ?", jobName).Find(&job)
+	if result.Error != nil {
+		responseWriter.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	jobData, ok := JobDataMap[jobName]
 	if ok && jobData != nil {
